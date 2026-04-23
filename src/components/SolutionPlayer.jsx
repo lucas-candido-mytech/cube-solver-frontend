@@ -137,6 +137,15 @@ export default function SolutionPlayer({ initialFaces, solution }) {
     }
   }
 
+  const [rotX, setRotX] = useState(-25)
+  const [rotY, setRotY] = useState(-30)
+  const dragging = useRef(false)
+  const lastPos = useRef({ x: 0, y: 0 })
+
+  const onPointerDown = (e) => { dragging.current = true; lastPos.current = { x: e.clientX, y: e.clientY }; e.currentTarget.setPointerCapture(e.pointerId) }
+  const onPointerMove = (e) => { if (!dragging.current) return; setRotY(r => r + (e.clientX - lastPos.current.x) * 0.5); setRotX(r => Math.max(-90, Math.min(90, r - (e.clientY - lastPos.current.y) * 0.5))); lastPos.current = { x: e.clientX, y: e.clientY } }
+  const onPointerUp = () => { dragging.current = false }
+
   return (
     <div className="mt-6 w-full max-w-lg">
       <div className="bg-white/5 backdrop-blur-md border border-emerald-500/20 rounded-2xl p-5">
@@ -145,13 +154,15 @@ export default function SolutionPlayer({ initialFaces, solution }) {
           <p className="text-2xl font-bold text-emerald-400 mt-1">{moves.length} movimentos</p>
         </div>
 
-        {/* Cubo 3D */}
-        <div className="flex justify-center mb-4">
-          <div style={{ width: 250, height: 250, perspective: 800 }}>
+        {/* Cubo 3D - arraste para rotacionar */}
+        <div className="flex justify-center mb-1">
+          <div style={{ width: 250, height: 250, perspective: 800, cursor: 'grab' }}
+            onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp}>
             <div style={{
               width: '100%', height: '100%',
               transformStyle: 'preserve-3d',
-              transform: 'translateZ(-75px) rotateX(-25deg) rotateY(-30deg)',
+              transform: `translateZ(-75px) rotateX(${rotX}deg) rotateY(${rotY}deg)`,
+              transition: dragging.current ? 'none' : 'transform 0.3s ease-out',
             }}>
               {/* Faces estáticas */}
               {allFaces.filter(f => f !== animBase).map(f => (
@@ -168,6 +179,9 @@ export default function SolutionPlayer({ initialFaces, solution }) {
             </div>
           </div>
         </div>
+        <p className="text-[10px] text-white/25 text-center mb-3">🖱️ Arraste para rotacionar o cubo
+          <button onClick={() => { setRotX(-25); setRotY(-30) }} className="ml-2 text-cyan-500/50 hover:text-cyan-400 transition-colors">↺ resetar</button>
+        </p>
 
         {/* Movimento atual */}
         <div className="text-center mb-3 h-12 flex flex-col items-center justify-center">
