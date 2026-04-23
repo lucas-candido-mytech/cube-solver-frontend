@@ -32,12 +32,12 @@ export function createEmptyFaces() {
 // Cubo embaralhado válido para teste rápido
 export function createDemoFaces() {
   return {
-    U: ['green','red','red','blue','white','orange','yellow','green','blue'],
-    R: ['white','yellow','green','white','red','blue','orange','red','yellow'],
-    F: ['orange','blue','white','orange','green','red','green','yellow','red'],
-    D: ['blue','orange','yellow','green','yellow','white','red','white','orange'],
-    L: ['yellow','green','blue','yellow','orange','white','white','blue','green'],
-    B: ['red','orange','orange','red','blue','green','blue','yellow','white'],
+    U: ['yellow','red','orange','white','white','blue','green','blue','red'],
+    R: ['blue','orange','white','red','red','orange','red','white','blue'],
+    F: ['orange','red','yellow','yellow','green','yellow','orange','green','white'],
+    D: ['green','white','green','green','yellow','blue','red','yellow','white'],
+    L: ['blue','red','white','green','orange','orange','green','yellow','yellow'],
+    B: ['blue','green','orange','white','blue','orange','red','blue','yellow'],
   }
 }
 
