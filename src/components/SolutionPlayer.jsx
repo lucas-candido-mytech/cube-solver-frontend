@@ -10,19 +10,42 @@ function describeMove(m) {
   return `${face} 90° ↻`
 }
 
-const SZ = 44, GAP = 3, FACE_SZ = SZ * 3 + GAP * 4, H = FACE_SZ / 2
+// Dimensões
+const SZ = 44, GAP = 3, PAD = GAP
+const FACE_SZ = SZ * 3 + GAP * 2 + PAD * 2
+const H = FACE_SZ / 2
 
-// Transform de cada face do cubo
-const FACE_TRANSFORMS = {
-  F: `rotateY(0deg) translateZ(${H}px)`,
-  B: `rotateY(180deg) translateZ(${H}px)`,
-  R: `rotateY(90deg) translateZ(${H}px)`,
-  L: `rotateY(-90deg) translateZ(${H}px)`,
-  U: `rotateX(90deg) translateZ(${H}px)`,
-  D: `rotateX(-90deg) translateZ(${H}px)`,
+// Posição de cada sticker (absoluta no espaço 3D)
+function stickerStyle(face, idx) {
+  const r = Math.floor(idx / 3), c = idx % 3
+  const x = -FACE_SZ / 2 + PAD + c * (SZ + GAP)
+  const y = -FACE_SZ / 2 + PAD + r * (SZ + GAP)
+  const transforms = {
+    F: `translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
+    B: `rotateY(180deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
+    R: `rotateY(90deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
+    L: `rotateY(-90deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
+    U: `rotateX(90deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
+    D: `rotateX(-90deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
+  }
+  return { position: 'absolute', width: SZ, height: SZ, transform: transforms[face] }
 }
 
-// Quais stickers pertencem à camada de um movimento
+// Fundo preto de cada face
+function faceBgStyle(face) {
+  const transforms = {
+    F: `translateZ(${H}px)`, B: `rotateY(180deg) translateZ(${H}px)`,
+    R: `rotateY(90deg) translateZ(${H}px)`, L: `rotateY(-90deg) translateZ(${H}px)`,
+    U: `rotateX(90deg) translateZ(${H}px)`, D: `rotateX(-90deg) translateZ(${H}px)`,
+  }
+  return {
+    position: 'absolute', width: FACE_SZ, height: FACE_SZ,
+    left: '50%', top: '50%', marginLeft: -FACE_SZ / 2, marginTop: -FACE_SZ / 2,
+    transform: transforms[face], background: '#111', borderRadius: 6,
+  }
+}
+
+// Stickers afetados por cada movimento
 const AFFECTED = {
   U: { face: 'U', adj: [['F',[0,1,2]],['R',[0,1,2]],['B',[0,1,2]],['L',[0,1,2]]] },
   D: { face: 'D', adj: [['F',[6,7,8]],['R',[6,7,8]],['B',[6,7,8]],['L',[6,7,8]]] },
@@ -33,7 +56,6 @@ const AFFECTED = {
 }
 
 function isAffected(face, idx, moveFace) {
-  if (!moveFace) return false
   const info = AFFECTED[moveFace]
   if (face === info.face) return true
   for (const [f, idxs] of info.adj) if (f === face && idxs.includes(idx)) return true
@@ -50,30 +72,15 @@ function getMoveAngle(notation) {
   return 90 * dir
 }
 
-// Renderiza uma face como painel com 9 stickers
-function FacePanel({ faceId, colors, animBase, isInLayer }) {
+function Sticker({ face, idx, color, glow }) {
   return (
-    <div style={{
-      position: 'absolute', width: FACE_SZ, height: FACE_SZ,
-      left: '50%', top: '50%',
-      marginLeft: -FACE_SZ / 2, marginTop: -FACE_SZ / 2,
-      transform: FACE_TRANSFORMS[faceId],
-      background: '#111',
-      borderRadius: 6,
-      display: 'grid',
-      gridTemplateColumns: `repeat(3, ${SZ}px)`,
-      gridTemplateRows: `repeat(3, ${SZ}px)`,
-      gap: GAP, padding: GAP,
-    }}>
-      {colors.map((c, i) => (
-        <div key={i} style={{
-          backgroundColor: COLOR_HEX[c] || '#222',
-          borderRadius: 5,
-          border: '1px solid rgba(0,0,0,0.3)',
-          boxShadow: (animBase && isAffected(faceId, i, animBase) && isInLayer)
-            ? '0 0 8px rgba(34,211,238,0.5)' : 'inset 0 1px 1px rgba(255,255,255,0.08)',
-        }} />
-      ))}
+    <div style={stickerStyle(face, idx)}>
+      <div style={{
+        width: '100%', height: '100%',
+        backgroundColor: COLOR_HEX[color] || '#222',
+        borderRadius: 5, border: '1px solid rgba(0,0,0,0.3)',
+        boxShadow: glow ? '0 0 10px rgba(34,211,238,0.6)' : 'inset 0 1px 1px rgba(255,255,255,0.08)',
+      }} />
     </div>
   )
 }
@@ -96,7 +103,6 @@ export default function SolutionPlayer({ initialFaces, solution }) {
     setAnimBase(notation[0])
     setAnimAngle(0)
     setStep(toStep - 1)
-
     let start = null
     const dur = 400
     const tick = (ts) => {
@@ -121,35 +127,23 @@ export default function SolutionPlayer({ initialFaces, solution }) {
   const goTo = (s) => { setPlaying(false); cancelAnimationFrame(rafRef.current); setAnimBase(null); setAnimAngle(0); setStep(s) }
 
   const displayFaces = states[step]
-  const layerCSS = animBase ? `${LAYER_AXIS[animBase]}(${animAngle}deg)` : ''
+  const layerTransform = animBase ? `${LAYER_AXIS[animBase]}(${animAngle}deg)` : ''
 
-  // Separa faces: inteiramente na camada, parcialmente, ou fora
-  // Uma face inteira está na camada se é a face principal do movimento
-  // Faces adjacentes têm stickers parciais — precisam ser duplicadas
-  const staticFaces = []
-  const layerFaces = []
+  // Gera todos os stickers, separando em estáticos e camada animada
+  const staticEls = [], layerEls = []
+  const allFaces = ['U','D','F','B','R','L']
 
-  if (animBase) {
-    const info = AFFECTED[animBase]
-    // Face principal vai inteira pra camada
-    layerFaces.push(
-      <FacePanel key={info.face} faceId={info.face} colors={displayFaces[info.face]} animBase={animBase} isInLayer />
-    )
-    // Faces não afetadas vão pro estático
-    const adjFaceIds = info.adj.map(a => a[0])
-    for (const f of ['U','D','F','B','R','L']) {
-      if (f === info.face) continue
-      // Face vai pro estático (sempre) — stickers parciais não movem visualmente de forma correta
-      // em CSS puro, então mostramos a face completa estática
-      staticFaces.push(
-        <FacePanel key={f} faceId={f} colors={displayFaces[f]} animBase={animBase} isInLayer={false} />
-      )
-    }
-  } else {
-    for (const f of ['U','D','F','B','R','L']) {
-      staticFaces.push(
-        <FacePanel key={f} faceId={f} colors={displayFaces[f]} animBase={null} isInLayer={false} />
-      )
+  // Fundos das faces (sempre estáticos — o fundo preto não se move)
+  const faceBgs = allFaces.map(f => <div key={`bg-${f}`} style={faceBgStyle(f)} />)
+
+  for (const face of allFaces) {
+    for (let idx = 0; idx < 9; idx++) {
+      const color = displayFaces[face][idx]
+      if (animBase && isAffected(face, idx, animBase)) {
+        layerEls.push(<Sticker key={`${face}${idx}`} face={face} idx={idx} color={color} glow />)
+      } else {
+        staticEls.push(<Sticker key={`${face}${idx}`} face={face} idx={idx} color={color} />)
+      }
     }
   }
 
@@ -168,14 +162,15 @@ export default function SolutionPlayer({ initialFaces, solution }) {
               width: '100%', height: '100%', position: 'relative',
               transformStyle: 'preserve-3d',
               transform: 'rotateX(-25deg) rotateY(-30deg)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              {/* Faces estáticas */}
-              <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d' }}>
-                {staticFaces}
-              </div>
-              {/* Camada animada */}
-              <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', transform: layerCSS }}>
-                {layerFaces}
+              {/* Fundos pretos das faces */}
+              <div style={{ position: 'absolute', transformStyle: 'preserve-3d' }}>{faceBgs}</div>
+              {/* Stickers estáticos */}
+              <div style={{ position: 'absolute', transformStyle: 'preserve-3d' }}>{staticEls}</div>
+              {/* Stickers da camada — giram como grupo */}
+              <div style={{ position: 'absolute', transformStyle: 'preserve-3d', transform: layerTransform }}>
+                {layerEls}
               </div>
             </div>
           </div>
