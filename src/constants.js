@@ -29,6 +29,18 @@ export function createEmptyFaces() {
   return faces
 }
 
+// Cubo embaralhado válido para teste rápido
+export function createDemoFaces() {
+  return {
+    U: ['green','red','red','blue','white','orange','yellow','green','blue'],
+    R: ['white','yellow','green','white','red','blue','orange','red','yellow'],
+    F: ['orange','blue','white','orange','green','red','green','yellow','red'],
+    D: ['blue','orange','yellow','green','yellow','white','red','white','orange'],
+    L: ['yellow','green','blue','yellow','orange','white','white','blue','green'],
+    B: ['red','orange','orange','red','blue','green','blue','yellow','white'],
+  }
+}
+
 export function classifyColor(r, g, b) {
   r /= 255; g /= 255; b /= 255
   const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min

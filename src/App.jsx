@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { STEPS, createEmptyFaces } from './constants'
+import { STEPS, createEmptyFaces, createDemoFaces } from './constants'
 import Stepper from './components/Stepper'
 import CubeViewer3D from './components/CubeViewer3D'
 import CameraCapture from './components/CameraCapture'
@@ -117,6 +117,10 @@ export default function App() {
         )}
         <button onClick={reset} className="px-5 py-2 rounded-xl text-xs font-medium text-red-400/70 border border-red-400/20 hover:bg-red-400/10 transition-all">
           🔄 Recomeçar
+        </button>
+        <button onClick={() => { setFaces(createDemoFaces()); setStepIdx(5); setSolution(null); setError('') }}
+          className="px-5 py-2 rounded-xl text-xs font-medium text-violet-400/70 border border-violet-400/20 hover:bg-violet-400/10 transition-all">
+          🎲 Demo
         </button>
       </div>
 
