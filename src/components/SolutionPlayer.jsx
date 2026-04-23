@@ -10,19 +10,16 @@ function describeMove(m) {
   return `${face} 90° ↻`
 }
 
-const SZ = 48, GAP = 3, FACE = SZ * 3 + GAP * 2, H = FACE / 2 + 1
+const SZ = 44, GAP = 3, FACE_SZ = SZ * 3 + GAP * 4, H = FACE_SZ / 2
 
-function stickerTransform(face, r, c) {
-  const x = -FACE / 2 + c * (SZ + GAP), y = -FACE / 2 + r * (SZ + GAP)
-  const t = {
-    F: `translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
-    B: `rotateY(180deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
-    R: `rotateY(90deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
-    L: `rotateY(-90deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
-    U: `rotateX(-90deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
-    D: `rotateX(90deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
-  }
-  return t[face]
+// Transform de cada face do cubo
+const FACE_TRANSFORMS = {
+  F: `rotateY(0deg) translateZ(${H}px)`,
+  B: `rotateY(180deg) translateZ(${H}px)`,
+  R: `rotateY(90deg) translateZ(${H}px)`,
+  L: `rotateY(-90deg) translateZ(${H}px)`,
+  U: `rotateX(90deg) translateZ(${H}px)`,
+  D: `rotateX(-90deg) translateZ(${H}px)`,
 }
 
 // Quais stickers pertencem à camada de um movimento
@@ -36,16 +33,14 @@ const AFFECTED = {
 }
 
 function isAffected(face, idx, moveFace) {
+  if (!moveFace) return false
   const info = AFFECTED[moveFace]
   if (face === info.face) return true
   for (const [f, idxs] of info.adj) if (f === face && idxs.includes(idx)) return true
   return false
 }
 
-// Eixo CSS de rotação da camada
-const LAYER_AXIS = {
-  U: 'rotateY', D: 'rotateY', R: 'rotateX', L: 'rotateX', F: 'rotateZ', B: 'rotateZ',
-}
+const LAYER_AXIS = { U: 'rotateY', D: 'rotateY', R: 'rotateX', L: 'rotateX', F: 'rotateZ', B: 'rotateZ' }
 const LAYER_DIR = { U: -1, D: 1, R: 1, L: -1, F: 1, B: -1 }
 
 function getMoveAngle(notation) {
@@ -55,23 +50,30 @@ function getMoveAngle(notation) {
   return 90 * dir
 }
 
-// Câmera fixa boa para ver todos os movimentos
-const DEFAULT_CAM = 'rotateX(-25deg) rotateY(-30deg)'
-
-function Sticker({ face, idx, color, glow }) {
-  const r = Math.floor(idx / 3), c = idx % 3
+// Renderiza uma face como painel com 9 stickers
+function FacePanel({ faceId, colors, animBase, isInLayer }) {
   return (
     <div style={{
-      position: 'absolute', width: SZ, height: SZ,
-      transform: stickerTransform(face, r, c),
-      backfaceVisibility: 'hidden',
+      position: 'absolute', width: FACE_SZ, height: FACE_SZ,
+      left: '50%', top: '50%',
+      marginLeft: -FACE_SZ / 2, marginTop: -FACE_SZ / 2,
+      transform: FACE_TRANSFORMS[faceId],
+      background: '#111',
+      borderRadius: 6,
+      display: 'grid',
+      gridTemplateColumns: `repeat(3, ${SZ}px)`,
+      gridTemplateRows: `repeat(3, ${SZ}px)`,
+      gap: GAP, padding: GAP,
     }}>
-      <div style={{
-        width: '100%', height: '100%',
-        backgroundColor: COLOR_HEX[color] || '#1e293b',
-        borderRadius: 5, border: '1px solid rgba(0,0,0,0.25)',
-        boxShadow: glow ? '0 0 8px rgba(34,211,238,0.5)' : 'inset 0 1px 2px rgba(255,255,255,0.1)',
-      }} />
+      {colors.map((c, i) => (
+        <div key={i} style={{
+          backgroundColor: COLOR_HEX[c] || '#222',
+          borderRadius: 5,
+          border: '1px solid rgba(0,0,0,0.3)',
+          boxShadow: (animBase && isAffected(faceId, i, animBase) && isInLayer)
+            ? '0 0 8px rgba(34,211,238,0.5)' : 'inset 0 1px 1px rgba(255,255,255,0.08)',
+        }} />
+      ))}
     </div>
   )
 }
@@ -93,29 +95,22 @@ export default function SolutionPlayer({ initialFaces, solution }) {
     const target = getMoveAngle(notation)
     setAnimBase(notation[0])
     setAnimAngle(0)
-    setStep(toStep - 1) // mostra estado ANTES do movimento
+    setStep(toStep - 1)
 
     let start = null
-    const dur = 350
+    const dur = 400
     const tick = (ts) => {
       if (!start) start = ts
       const p = Math.min((ts - start) / dur, 1)
-      const eased = 1 - Math.pow(1 - p, 3)
-      setAnimAngle(target * eased)
-      if (p < 1) {
-        rafRef.current = requestAnimationFrame(tick)
-      } else {
-        setAnimBase(null)
-        setAnimAngle(0)
-        setStep(toStep)
-      }
+      setAnimAngle(target * (1 - Math.pow(1 - p, 3)))
+      if (p < 1) rafRef.current = requestAnimationFrame(tick)
+      else { setAnimBase(null); setAnimAngle(0); setStep(toStep) }
     }
     rafRef.current = requestAnimationFrame(tick)
   }, [moves])
 
   useEffect(() => () => cancelAnimationFrame(rafRef.current), [])
   useEffect(() => { playRef.current = playing }, [playing])
-
   useEffect(() => {
     if (!playing || animating) return
     if (step >= moves.length) { setPlaying(false); return }
@@ -128,13 +123,33 @@ export default function SolutionPlayer({ initialFaces, solution }) {
   const displayFaces = states[step]
   const layerCSS = animBase ? `${LAYER_AXIS[animBase]}(${animAngle}deg)` : ''
 
-  // Separa stickers em estáticos e animados
-  const statics = [], animated = []
-  for (const face of ['U','D','F','B','R','L']) {
-    for (let idx = 0; idx < 9; idx++) {
-      const s = <Sticker key={`${face}${idx}`} face={face} idx={idx} color={displayFaces[face][idx]} glow={animBase && isAffected(face, idx, animBase)} />
-      if (animBase && isAffected(face, idx, animBase)) animated.push(s)
-      else statics.push(s)
+  // Separa faces: inteiramente na camada, parcialmente, ou fora
+  // Uma face inteira está na camada se é a face principal do movimento
+  // Faces adjacentes têm stickers parciais — precisam ser duplicadas
+  const staticFaces = []
+  const layerFaces = []
+
+  if (animBase) {
+    const info = AFFECTED[animBase]
+    // Face principal vai inteira pra camada
+    layerFaces.push(
+      <FacePanel key={info.face} faceId={info.face} colors={displayFaces[info.face]} animBase={animBase} isInLayer />
+    )
+    // Faces não afetadas vão pro estático
+    const adjFaceIds = info.adj.map(a => a[0])
+    for (const f of ['U','D','F','B','R','L']) {
+      if (f === info.face) continue
+      // Face vai pro estático (sempre) — stickers parciais não movem visualmente de forma correta
+      // em CSS puro, então mostramos a face completa estática
+      staticFaces.push(
+        <FacePanel key={f} faceId={f} colors={displayFaces[f]} animBase={animBase} isInLayer={false} />
+      )
+    }
+  } else {
+    for (const f of ['U','D','F','B','R','L']) {
+      staticFaces.push(
+        <FacePanel key={f} faceId={f} colors={displayFaces[f]} animBase={null} isInLayer={false} />
+      )
     }
   }
 
@@ -148,24 +163,19 @@ export default function SolutionPlayer({ initialFaces, solution }) {
 
         {/* Cubo 3D */}
         <div className="flex justify-center mb-4">
-          <div style={{ width: 240, height: 240, perspective: 700 }}>
+          <div style={{ width: 250, height: 250, perspective: 800 }}>
             <div style={{
               width: '100%', height: '100%', position: 'relative',
               transformStyle: 'preserve-3d',
-              transform: DEFAULT_CAM,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transform: 'rotateX(-25deg) rotateY(-30deg)',
             }}>
-              {/* Stickers estáticos */}
-              <div style={{ position: 'absolute', transformStyle: 'preserve-3d' }}>
-                {statics}
+              {/* Faces estáticas */}
+              <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d' }}>
+                {staticFaces}
               </div>
-              {/* Camada animada - gira como grupo */}
-              <div style={{
-                position: 'absolute', transformStyle: 'preserve-3d',
-                transform: layerCSS,
-                transition: 'none',
-              }}>
-                {animated}
+              {/* Camada animada */}
+              <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', transform: layerCSS }}>
+                {layerFaces}
               </div>
             </div>
           </div>
