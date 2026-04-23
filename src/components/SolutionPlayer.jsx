@@ -10,39 +10,14 @@ function describeMove(m) {
   return `${face} 90° ↻`
 }
 
-// Dimensões
-const SZ = 44, GAP = 3, PAD = GAP
-const FACE_SZ = SZ * 3 + GAP * 2 + PAD * 2
+const SZ = 44, GAP = 3
+const FACE_SZ = SZ * 3 + GAP * 2
 const H = FACE_SZ / 2
 
-// Posição de cada sticker (absoluta no espaço 3D)
-function stickerStyle(face, idx) {
-  const r = Math.floor(idx / 3), c = idx % 3
-  const x = -FACE_SZ / 2 + PAD + c * (SZ + GAP)
-  const y = -FACE_SZ / 2 + PAD + r * (SZ + GAP)
-  const transforms = {
-    F: `translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
-    B: `rotateY(180deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
-    R: `rotateY(90deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
-    L: `rotateY(-90deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
-    U: `rotateX(90deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
-    D: `rotateX(-90deg) translateZ(${H}px) translate3d(${x}px,${y}px,0)`,
-  }
-  return { position: 'absolute', width: SZ, height: SZ, transform: transforms[face] }
-}
-
-// Fundo preto de cada face
-function faceBgStyle(face) {
-  const transforms = {
-    F: `translateZ(${H}px)`, B: `rotateY(180deg) translateZ(${H}px)`,
-    R: `rotateY(90deg) translateZ(${H}px)`, L: `rotateY(-90deg) translateZ(${H}px)`,
-    U: `rotateX(90deg) translateZ(${H}px)`, D: `rotateX(-90deg) translateZ(${H}px)`,
-  }
-  return {
-    position: 'absolute', width: FACE_SZ, height: FACE_SZ,
-    left: '50%', top: '50%', marginLeft: -FACE_SZ / 2, marginTop: -FACE_SZ / 2,
-    transform: transforms[face], background: '#111', borderRadius: 6,
-  }
+// Cada face: rotação que a coloca na posição correta do cubo
+const FACE_ROT = {
+  F: '', B: 'rotateY(180deg)', R: 'rotateY(90deg)',
+  L: 'rotateY(-90deg)', U: 'rotateX(90deg)', D: 'rotateX(-90deg)',
 }
 
 // Stickers afetados por cada movimento
@@ -72,15 +47,30 @@ function getMoveAngle(notation) {
   return 90 * dir
 }
 
-function Sticker({ face, idx, color, glow }) {
+// Uma face completa: fundo preto + 9 stickers como grid
+function CubeFace({ faceId, colors, glow }) {
   return (
-    <div style={stickerStyle(face, idx)}>
-      <div style={{
-        width: '100%', height: '100%',
-        backgroundColor: COLOR_HEX[color] || '#222',
-        borderRadius: 5, border: '1px solid rgba(0,0,0,0.3)',
-        boxShadow: glow ? '0 0 10px rgba(34,211,238,0.6)' : 'inset 0 1px 1px rgba(255,255,255,0.08)',
-      }} />
+    <div style={{
+      position: 'absolute',
+      width: FACE_SZ, height: FACE_SZ,
+      // Centraliza no ponto de origem e depois posiciona na face do cubo
+      left: '50%', top: '50%',
+      transform: `translate(-50%,-50%) ${FACE_ROT[faceId]} translateZ(${H}px)`,
+      background: '#111', borderRadius: 6,
+      display: 'grid',
+      gridTemplateColumns: `repeat(3, ${SZ}px)`,
+      gridTemplateRows: `repeat(3, ${SZ}px)`,
+      gap: GAP,
+    }}>
+      {colors.map((c, i) => (
+        <div key={i} style={{
+          backgroundColor: COLOR_HEX[c] || '#222',
+          borderRadius: 5,
+          border: '1px solid rgba(0,0,0,0.3)',
+          boxShadow: glow?.[i] ? '0 0 10px rgba(34,211,238,0.6)' : 'inset 0 1px 1px rgba(255,255,255,0.08)',
+          transition: 'box-shadow 0.2s',
+        }} />
+      ))}
     </div>
   )
 }
@@ -127,23 +117,23 @@ export default function SolutionPlayer({ initialFaces, solution }) {
   const goTo = (s) => { setPlaying(false); cancelAnimationFrame(rafRef.current); setAnimBase(null); setAnimAngle(0); setStep(s) }
 
   const displayFaces = states[step]
+
+  // Sem animação: renderiza 6 faces normais
+  // Com animação: a face principal do movimento vai pro grupo animado,
+  // as outras ficam estáticas. Os stickers de borda brilham mas ficam estáticos
+  // (mover stickers individuais de faces diferentes causa desalinhamento)
   const layerTransform = animBase ? `${LAYER_AXIS[animBase]}(${animAngle}deg)` : ''
 
-  // Gera todos os stickers, separando em estáticos e camada animada
-  const staticEls = [], layerEls = []
   const allFaces = ['U','D','F','B','R','L']
 
-  // Fundos das faces (sempre estáticos — o fundo preto não se move)
-  const faceBgs = allFaces.map(f => <div key={`bg-${f}`} style={faceBgStyle(f)} />)
-
-  for (const face of allFaces) {
-    for (let idx = 0; idx < 9; idx++) {
-      const color = displayFaces[face][idx]
-      if (animBase && isAffected(face, idx, animBase)) {
-        layerEls.push(<Sticker key={`${face}${idx}`} face={face} idx={idx} color={color} glow />)
-      } else {
-        staticEls.push(<Sticker key={`${face}${idx}`} face={face} idx={idx} color={color} />)
-      }
+  // Glow map: quais stickers de cada face brilham
+  const glowMap = {}
+  if (animBase) {
+    const info = AFFECTED[animBase]
+    for (const f of allFaces) {
+      glowMap[f] = Array(9).fill(false)
+      if (f === info.face) glowMap[f] = Array(9).fill(true)
+      else for (const [af, idxs] of info.adj) if (af === f) idxs.forEach(i => glowMap[f][i] = true)
     }
   }
 
@@ -159,19 +149,22 @@ export default function SolutionPlayer({ initialFaces, solution }) {
         <div className="flex justify-center mb-4">
           <div style={{ width: 250, height: 250, perspective: 800 }}>
             <div style={{
-              width: '100%', height: '100%', position: 'relative',
+              width: '100%', height: '100%',
               transformStyle: 'preserve-3d',
-              transform: 'rotateX(-25deg) rotateY(-30deg)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transform: 'translateZ(-75px) rotateX(-25deg) rotateY(-30deg)',
             }}>
-              {/* Fundos pretos das faces */}
-              <div style={{ position: 'absolute', transformStyle: 'preserve-3d' }}>{faceBgs}</div>
-              {/* Stickers estáticos */}
-              <div style={{ position: 'absolute', transformStyle: 'preserve-3d' }}>{staticEls}</div>
-              {/* Stickers da camada — giram como grupo */}
-              <div style={{ position: 'absolute', transformStyle: 'preserve-3d', transform: layerTransform }}>
-                {layerEls}
-              </div>
+              {/* Faces estáticas */}
+              {allFaces.filter(f => f !== animBase).map(f => (
+                <CubeFace key={f} faceId={f} colors={displayFaces[f]} glow={glowMap[f]} />
+              ))}
+              {/* Face animada (gira) */}
+              {animBase && (
+                <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', transform: layerTransform }}>
+                  <CubeFace faceId={animBase} colors={displayFaces[animBase]} glow={glowMap[animBase]} />
+                </div>
+              )}
+              {/* Se não animando, renderiza a face que seria animBase também */}
+              {!animBase && null}
             </div>
           </div>
         </div>
