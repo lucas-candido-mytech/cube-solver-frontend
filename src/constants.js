@@ -1,18 +1,24 @@
 export const STEPS = [
-  { face: 'U', title: 'Face de CIMA', color: 'Branca', hint: 'Segure o cubo com a face branca virada para cima.', rotation: 'rotateX(-35deg) rotateY(-30deg)', arrow: 'Incline o cubo para mostrar o topo' },
-  { face: 'F', title: 'Face da FRENTE', color: 'Verde', hint: 'Aponte a câmera para a face da frente (verde no centro).', rotation: 'rotateX(0deg) rotateY(0deg)', arrow: 'Cubo de frente — face verde virada para você' },
-  { face: 'R', title: 'Face DIREITA', color: 'Vermelha', hint: 'Gire o cubo 90° para a esquerda. A face vermelha fica de frente.', rotation: 'rotateX(0deg) rotateY(-90deg)', arrow: '↩️ Gire 90° para a esquerda' },
-  { face: 'B', title: 'Face de TRÁS', color: 'Azul', hint: 'Gire mais 90° para a esquerda. A face azul fica de frente.', rotation: 'rotateX(0deg) rotateY(-180deg)', arrow: '↩️ Gire mais 90° para a esquerda' },
-  { face: 'L', title: 'Face ESQUERDA', color: 'Laranja', hint: 'Gire mais 90° para a esquerda. A face laranja fica de frente.', rotation: 'rotateX(0deg) rotateY(-270deg)', arrow: '↩️ Gire mais 90° para a esquerda' },
-  { face: 'D', title: 'Face de BAIXO', color: 'Amarela', hint: 'Incline o cubo para ver a face de baixo (amarela no centro).', rotation: 'rotateX(35deg) rotateY(-30deg)', arrow: 'Incline o cubo para mostrar a base' },
+  { face: 'U', title: 'Cima', color: 'Branca', emoji: '⬆️', hint: 'Segure o cubo com a face branca virada para cima', rotation: 'rotateX(-35deg) rotateY(-30deg)', arrow: 'Incline o cubo para mostrar o topo' },
+  { face: 'F', title: 'Frente', color: 'Verde', emoji: '🟢', hint: 'Aponte a câmera para a face da frente (verde no centro)', rotation: 'rotateX(0deg) rotateY(0deg)', arrow: 'Face verde virada para você' },
+  { face: 'R', title: 'Direita', color: 'Vermelha', emoji: '🔴', hint: 'Gire o cubo 90° para a esquerda', rotation: 'rotateX(0deg) rotateY(-90deg)', arrow: '↩️ Gire 90° para a esquerda' },
+  { face: 'B', title: 'Trás', color: 'Azul', emoji: '🔵', hint: 'Gire mais 90° para a esquerda', rotation: 'rotateX(0deg) rotateY(-180deg)', arrow: '↩️ Gire mais 90°' },
+  { face: 'L', title: 'Esquerda', color: 'Laranja', emoji: '🟠', hint: 'Gire mais 90° para a esquerda', rotation: 'rotateX(0deg) rotateY(-270deg)', arrow: '↩️ Gire mais 90°' },
+  { face: 'D', title: 'Baixo', color: 'Amarela', emoji: '⬇️', hint: 'Incline o cubo para ver a face de baixo', rotation: 'rotateX(35deg) rotateY(-30deg)', arrow: 'Incline para mostrar a base' },
 ]
 
 export const FACE_CENTER = { U: 'white', L: 'orange', F: 'green', R: 'red', B: 'blue', D: 'yellow' }
 export const COLORS = ['white', 'red', 'green', 'yellow', 'orange', 'blue']
-export const COLOR_HEX = { white: '#fff', red: '#f00', green: '#0a0', yellow: '#fd0', orange: '#f80', blue: '#04f' }
+export const COLOR_HEX = { white: '#ffffff', red: '#ef4444', green: '#22c55e', yellow: '#eab308', orange: '#f97316', blue: '#3b82f6' }
 export const COLOR_NAMES = { white: 'Branco', red: 'Vermelho', green: 'Verde', yellow: 'Amarelo', orange: 'Laranja', blue: 'Azul' }
-export const FACE_COLORS_3D = { U: '#ffffff', D: '#ffdd00', F: '#00aa00', B: '#0044ff', R: '#ff0000', L: '#ff8800' }
+export const FACE_COLORS_3D = { U: '#ffffff', D: '#eab308', F: '#22c55e', B: '#3b82f6', R: '#ef4444', L: '#f97316' }
 export const FACE_3D_MAP = { U: 'top', D: 'bottom', F: 'front', B: 'back', R: 'right', L: 'left' }
+
+export const COLOR_BG = {
+  white: 'bg-white', red: 'bg-red-500', green: 'bg-green-500',
+  yellow: 'bg-yellow-500', orange: 'bg-orange-500', blue: 'bg-blue-500',
+  empty: 'bg-white/5'
+}
 
 export function createEmptyFaces() {
   const faces = {}
